@@ -13,8 +13,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Lib.Harmony" Version="2.1.1" />
-	  <PackageReference Include="OpenMod.UnityEngine.Redist" Version="2021.3.29.1" />
-	  <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.24.4" />
+	  <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.24.6" ExcludeAssets="runtime" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -29,6 +28,14 @@
 	  <Reference Include="SDG.Glazier.Runtime">
 	    <HintPath>libs\SDG.Glazier.Runtime.dll</HintPath>
 	    <Private>false</Private>
+	  </Reference>
+	  <Reference Include="UnityEngine.ImageConversionModule">
+	    <HintPath>libs\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+	  </Reference>
+	  <Reference Include="UnityEngine.TextRenderingModule">
+	    <HintPath>libs\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
 	  </Reference>
 	</ItemGroup>
 

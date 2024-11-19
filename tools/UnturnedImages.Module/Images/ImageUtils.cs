@@ -119,7 +119,7 @@ namespace UnturnedImages.Module.Images
                     modPathSection = "Official";
                 }
 
-                var fullPath = Path.Combine(basePath, modPathSection, asset.GUID.ToString());
+                var fullPath = Path.Combine(basePath, modPathSection, asset.GUID.ToString().Replace("-", "").ToLower());
 
                 exportAction(asset, fullPath);
             }
