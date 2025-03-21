@@ -1,7 +1,10 @@
-﻿using SDG.Framework.Modules;
+﻿using Newtonsoft.Json;
+using SDG.Framework.Modules;
 using SDG.Unturned;
+using System.IO;
 using UnityEngine;
 using UnturnedImages.Module.Images;
+using UnturnedImages.Module.Models;
 using UnturnedImages.Module.Patches;
 using UnturnedImages.Module.UI;
 
@@ -22,11 +25,23 @@ namespace UnturnedImages.Module
             _uiManager = new UIManager();
         }
 
+        public static UnturnedImagesConfig? Config;
+
         public void initialize()
         {
             UnturnedLog.info("Loading UnturnedImages Module");
 
             Instance = this;
+
+            if (File.Exists("config.json"))
+            {
+                string content = File.ReadAllText("config.json");
+                Config = JsonConvert.DeserializeObject<UnturnedImagesConfig>(content);
+            } else
+            {
+                Config = new UnturnedImagesConfig();
+                File.WriteAllText("config.json", JsonConvert.SerializeObject(Config, Formatting.Indented));
+            }
 
             GameObject = new GameObject();
             DontDestroyOnLoad(GameObject);

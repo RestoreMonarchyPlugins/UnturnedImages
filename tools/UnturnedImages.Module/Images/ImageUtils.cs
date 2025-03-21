@@ -175,6 +175,12 @@ namespace UnturnedImages.Module.Images
                     extraPath = path
                 };
 
+                if (UnturnedImagesModule.Config != null && UnturnedImagesModule.Config.SkipGuids.Contains(asset.GUID))
+                {
+                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.itemName})");
+                    return;
+                }
+
                 ItemTool.getIcon(asset.id, 0, 100, asset.getState(), asset, null, string.Empty,
                     string.Empty, asset.size_x * 512, asset.size_y * 512, false, true,
                     texture =>
