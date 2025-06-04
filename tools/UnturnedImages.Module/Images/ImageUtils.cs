@@ -181,11 +181,17 @@ namespace UnturnedImages.Module.Images
                     return;
                 }
 
+                if (File.Exists(path))
+                {
+                    UnturnedLog.info($"File already exists: {path}");
+                    return;
+                }
+
                 ItemTool.getIcon(asset.id, 0, 100, asset.getState(), asset, null, string.Empty,
                     string.Empty, asset.size_x * 512, asset.size_y * 512, false, true,
-                    texture =>
+                    (handle, texture) =>
                     {
-                        extraItemIconInfo.onItemIconReady(texture);
+                        extraItemIconInfo.onItemIconReady(handle, texture);
                     });
 
                 IconUtils.extraIcons.Add(extraItemIconInfo);

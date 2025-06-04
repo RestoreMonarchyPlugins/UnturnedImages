@@ -13,7 +13,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Lib.Harmony" Version="2.1.1" />
-	  <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.24.6" ExcludeAssets="runtime" />
+	  <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.25.5" ExcludeAssets="runtime" />
 	</ItemGroup>
 
 	<ItemGroup>

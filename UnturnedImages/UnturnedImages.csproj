@@ -30,7 +30,7 @@
 	<ItemGroup>
 		<PackageReference Include="OpenMod.Unturned" Version="3.8.10" />
 		<PackageReference Include="SilK.Unturned.Extras" Version="1.7.5" />
-    <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.24.4" />
+    <PackageReference Include="RestoreMonarchy.UnturnedRedist" Version="3.25.5" />
 	</ItemGroup>
 
 	<ItemGroup>
