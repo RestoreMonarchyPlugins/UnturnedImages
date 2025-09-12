@@ -157,6 +157,12 @@ namespace UnturnedImages.Module.Images
 
             CaptureImages(vehicleAssets, category, (asset, path) =>
             {
+                if (UnturnedImagesModule.Config != null && UnturnedImagesModule.Config.SkipGuids.Contains(asset.GUID))
+                {
+                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.vehicleName})");
+                    return;
+                }
+
                 CustomVehicleTool.QueueVehicleIcon(asset, path, 1024, 1024, vehicleAngles);
             });
         }
