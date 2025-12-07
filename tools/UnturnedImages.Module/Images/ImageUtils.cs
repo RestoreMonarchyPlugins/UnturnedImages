@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnturnedImages.Module.Helpers;
 using UnturnedImages.Module.Workshop;
 
 namespace UnturnedImages.Module.Images
@@ -157,9 +158,9 @@ namespace UnturnedImages.Module.Images
 
             CaptureImages(vehicleAssets, category, (asset, path) =>
             {
-                if (UnturnedImagesModule.Config != null && UnturnedImagesModule.Config.SkipGuids.Contains(asset.GUID))
+                if (CrashRecoveryHelper.ShouldSkip(asset.GUID))
                 {
-                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.vehicleName})");
+                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.vehicleName}) - in skip list");
                     return;
                 }
 
@@ -170,7 +171,7 @@ namespace UnturnedImages.Module.Images
         public static void CaptureItemImages(IEnumerable<ItemAsset> itemAssets, Vector3? itemIconRotation = null)
         {
             const string category = "Items";
-            
+
             // Update item icon rotation
             ItemIconRotation = itemIconRotation ?? Vector3.zero;
 
@@ -181,9 +182,9 @@ namespace UnturnedImages.Module.Images
                     extraPath = path
                 };
 
-                if (UnturnedImagesModule.Config != null && UnturnedImagesModule.Config.SkipGuids.Contains(asset.GUID))
+                if (CrashRecoveryHelper.ShouldSkip(asset.GUID))
                 {
-                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.itemName})");
+                    UnturnedLog.info($"Skipping {asset.GUID} ({asset.itemName}) - in skip list");
                     return;
                 }
 

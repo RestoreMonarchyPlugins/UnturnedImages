@@ -1,0 +1,34 @@
+{
+  "SkipGuids": [],
+  "AutoStart": {
+    "Enabled": true,
+    "Mode": "all",
+    "ModId": null,
+    "GenerateItems": true,
+    "GenerateVehicles": true,
+    "ItemAngles": null,
+    "VehicleAngles": [10, 135, -10],
+    "QuitWhenDone": true,
+    "StartDelaySeconds": 10
+  }
+}
+
+// Available Modes:
+// - "all"      : Generate icons for all items and vehicles
+// - "items"    : Generate icons for all items only
+// - "vehicles" : Generate icons for all vehicles only
+// - "mod"      : Generate icons for a specific workshop mod (requires ModId)
+
+// Example for generating icons for a specific mod:
+// {
+//   "SkipGuids": [],
+//   "AutoStart": {
+//     "Enabled": true,
+//     "Mode": "mod",
+//     "ModId": 1234567890,
+//     "GenerateItems": true,
+//     "GenerateVehicles": true,
+//     "QuitWhenDone": true,
+//     "StartDelaySeconds": 10
+//   }
+// }

@@ -1,8 +1,8 @@
-﻿using SDG.Unturned;
+using SDG.Unturned;
+using System;
 using System.Collections.Generic;
-using System.Net;
 using UnityEngine;
-using UnityEngine.Assertions;
+using UnturnedImages.Module.Helpers;
 
 namespace UnturnedImages.Module.Images
 {
@@ -59,8 +59,8 @@ namespace UnturnedImages.Module.Images
         }
 
         public static Transform? GetVehicle(VehicleAsset vehicleAsset)
-		{
-			var gameObject = vehicleAsset.GetOrLoadModel();
+        {
+            var gameObject = vehicleAsset.GetOrLoadModel();
 
             if (gameObject == null)
             {
@@ -94,125 +94,186 @@ namespace UnturnedImages.Module.Images
 
             var vehicleIconInfo = Icons.Dequeue();
             var vehicleAsset = vehicleIconInfo.VehicleAsset;
-            var vehicle = GetVehicle(vehicleAsset);
+
+            // Check if this vehicle should be skipped
+            if (CrashRecoveryHelper.ShouldSkip(vehicleAsset.GUID))
+            {
+                UnturnedLog.info($"Skipping {vehicleAsset.GUID} ({vehicleAsset.vehicleName}) - in skip list");
+                return;
+            }
+
+            // Mark that we're starting to process this vehicle (for crash recovery)
+            CrashRecoveryHelper.MarkProcessingStart(vehicleAsset.GUID, vehicleAsset.vehicleName, "vehicle");
+
+            Transform? vehicle = null;
+            try
+            {
+                vehicle = GetVehicle(vehicleAsset);
+            }
+            catch (Exception ex)
+            {
+                UnturnedLog.error($"Exception loading model for vehicle {vehicleAsset.GUID} ({vehicleAsset.vehicleName}): {ex.Message}");
+                CrashRecoveryHelper.AddToSkipList(vehicleAsset.GUID, vehicleAsset.vehicleName);
+                CrashRecoveryHelper.MarkProcessingComplete();
+                return;
+            }
+
             if (vehicle == null)
             {
                 UnturnedLog.error($"Could not get model for vehicle with ID {vehicleAsset.GUID}");
+                CrashRecoveryHelper.MarkProcessingComplete();
                 return;
             }
 
             UnturnedLog.info($"Capturing icon for vehicle with ID {vehicleAsset.GUID} ({vehicleAsset.vehicleName})");
 
-            Layerer.relayer(vehicle, LayerMasks.VEHICLE);
-            foreach (var weirdLookingObject in _weirdLookingObjects)
+            Transform? vehicleParent = null;
+            try
             {
-                var child = vehicle.Find(weirdLookingObject);
-                if (child != null)
+                Layerer.relayer(vehicle, LayerMasks.VEHICLE);
+                foreach (var weirdLookingObject in _weirdLookingObjects)
                 {
-                    child.gameObject.SetActive(false);
-                }
-            }
-
-            // fix rotors
-            var rotors = vehicle.Find("Rotors");
-            if (rotors != null)
-            {
-                for (var i = 0; i < rotors.childCount; i++)
-                {
-                    var rotor = rotors.GetChild(i);
-
-                    var material0 = rotor.Find("Model_0").GetComponent<Renderer>().material;
-                    var material1 = rotor.Find("Model_1").GetComponent<Renderer>().material;
-
-                    if (vehicleAsset.requiredShaderUpgrade)
+                    var child = vehicle.Find(weirdLookingObject);
+                    if (child != null)
                     {
-                        if (StandardShaderUtils.isMaterialUsingStandardShader(material0))
+                        child.gameObject.SetActive(false);
+                    }
+                }
+
+                // fix rotors
+                var rotors = vehicle.Find("Rotors");
+                if (rotors != null)
+                {
+                    for (var i = 0; i < rotors.childCount; i++)
+                    {
+                        var rotor = rotors.GetChild(i);
+
+                        var model0 = rotor.Find("Model_0");
+                        var model1 = rotor.Find("Model_1");
+
+                        // Skip if rotor models are missing
+                        if (model0 == null || model1 == null)
+                            continue;
+
+                        var renderer0 = model0.GetComponent<Renderer>();
+                        var renderer1 = model1.GetComponent<Renderer>();
+
+                        if (renderer0 == null || renderer1 == null)
+                            continue;
+
+                        var material0 = renderer0.material;
+                        var material1 = renderer1.material;
+
+                        if (vehicleAsset.requiredShaderUpgrade)
                         {
-                            StandardShaderUtils.setModeToTransparent(material0);
+                            if (StandardShaderUtils.isMaterialUsingStandardShader(material0))
+                            {
+                                StandardShaderUtils.setModeToTransparent(material0);
+                            }
+                            if (StandardShaderUtils.isMaterialUsingStandardShader(material1))
+                            {
+                                StandardShaderUtils.setModeToTransparent(material1);
+                            }
                         }
-                        if (StandardShaderUtils.isMaterialUsingStandardShader(material1))
-                        {
-                            StandardShaderUtils.setModeToTransparent(material1);
-                        }
+
+                        var color = material0.color;
+                        color.a = 1f;
+                        material0.color = color;
+
+                        color.a = 0f;
+                        material1.color = color;
+
+                        rotor.localRotation = Quaternion.identity;
                     }
-
-                    var color = material0.color;
-                    color.a = 1f;
-                    material0.color = color;
-
-                    color.a = 0f;
-                    material1.color = color;
-
-                    rotor.localRotation = Quaternion.identity;
                 }
-            }
 
-            var vehicleParent = new GameObject().transform;
-            vehicle.SetParent(vehicleParent);
+                vehicleParent = new GameObject().transform;
+                vehicle.SetParent(vehicleParent);
 
-            vehicleParent.position = new Vector3(-256f, -256f, 0f);
+                vehicleParent.position = new Vector3(-256f, -256f, 0f);
 
-            if (_camera == null)
-                _camera = Instantiate(new GameObject()).transform;
+                if (_camera == null)
+                    _camera = Instantiate(new GameObject()).transform;
 
-            _camera.SetParent(vehicle, false);
+                _camera.SetParent(vehicle, false);
 
-            vehicle.Rotate(vehicleIconInfo.Angles);
-            _camera.rotation = Quaternion.identity;
+                vehicle.Rotate(vehicleIconInfo.Angles);
+                _camera.rotation = Quaternion.identity;
 
-            var orthographicSize = CustomImageTool.CalculateOrthographicSize(vehicleAsset, vehicleParent.gameObject,
-                _camera, vehicleIconInfo.Width, vehicleIconInfo.Height, out var cameraPosition);
+                var orthographicSize = CustomImageTool.CalculateOrthographicSize(vehicleAsset, vehicleParent.gameObject,
+                    _camera, vehicleIconInfo.Width, vehicleIconInfo.Height, out var cameraPosition);
 
-            _camera.position = cameraPosition;
+                _camera.position = cameraPosition;
 
-            if(!vehicleAsset.SupportsPaintColor)
-            {
-                Texture2D texture = CustomImageTool.CaptureIcon(vehicleAsset.GUID, 0, vehicle, _camera,
-                vehicleIconInfo.Width, vehicleIconInfo.Height, orthographicSize, true);
-
-                var path = $"{vehicleIconInfo.OutputPath}.png";
-
-                var bytes = texture.EncodeToPNG();
-
-                ReadWrite.writeBytes(path, false, false, bytes);
-            }
-            else
-            {
-                var color32 = vehicleAsset.GetRandomDefaultPaintColor();
-                Color color = color32.HasValue ? color32.Value : Color.red;
-                PaintableVehicleSection[] paintableVehicleSections = vehicleAsset.PaintableVehicleSections;
-                for (int i = 0; i < paintableVehicleSections.Length; i++)
+                if (!vehicleAsset.SupportsPaintColor)
                 {
-                    PaintableVehicleSection paintableVehicleSection = paintableVehicleSections[i];
-                    Transform transform = vehicle.Find(paintableVehicleSection.path);
-                    if (transform == null)
+                    Texture2D texture = CustomImageTool.CaptureIcon(vehicleAsset.GUID, 0, vehicle, _camera,
+                    vehicleIconInfo.Width, vehicleIconInfo.Height, orthographicSize, true);
+
+                    var path = $"{vehicleIconInfo.OutputPath}.png";
+
+                    var bytes = texture.EncodeToPNG();
+
+                    ReadWrite.writeBytes(path, false, false, bytes);
+                }
+                else
+                {
+                    var color32 = vehicleAsset.GetRandomDefaultPaintColor();
+                    Color color = color32.HasValue ? color32.Value : Color.red;
+                    PaintableVehicleSection[] paintableVehicleSections = vehicleAsset.PaintableVehicleSections;
+                    for (int i = 0; i < paintableVehicleSections.Length; i++)
                     {
-                        Assets.reportError(vehicleAsset, "paintable section missing transform \"" + paintableVehicleSection.path + "\"");
-                        continue;
+                        PaintableVehicleSection paintableVehicleSection = paintableVehicleSections[i];
+                        Transform transform = vehicle.Find(paintableVehicleSection.path);
+                        if (transform == null)
+                        {
+                            Assets.reportError(vehicleAsset, "paintable section missing transform \"" + paintableVehicleSection.path + "\"");
+                            continue;
+                        }
+
+                        Renderer component = transform.GetComponent<Renderer>();
+                        if (component == null)
+                        {
+                            Assets.reportError(vehicleAsset, "paintable section missing renderer \"" + paintableVehicleSection.path + "\"");
+                            continue;
+                        }
+
+                        component.material.SetColor(Shader.PropertyToID("_PaintColor"), color);
                     }
 
-                    Renderer component = transform.GetComponent<Renderer>();
-                    if (component == null)
-                    {
-                        Assets.reportError(vehicleAsset, "paintable section missing renderer \"" + paintableVehicleSection.path + "\"");
-                        continue;
-                    }
+                    Texture2D texture = CustomImageTool.CaptureIcon(vehicleAsset.GUID, 0, vehicle, _camera,
+                            vehicleIconInfo.Width, vehicleIconInfo.Height, orthographicSize, true);
 
-                    component.material.SetColor(Shader.PropertyToID("_PaintColor"), color);
+                    var path = $"{vehicleIconInfo.OutputPath}.png";
+
+                    var bytes = texture.EncodeToPNG();
+
+                    ReadWrite.writeBytes(path, false, false, bytes);
                 }
 
-                Texture2D texture = CustomImageTool.CaptureIcon(vehicleAsset.GUID, 0, vehicle, _camera,
-                        vehicleIconInfo.Width, vehicleIconInfo.Height, orthographicSize, true);
-
-                var path = $"{vehicleIconInfo.OutputPath}.png";
-
-                var bytes = texture.EncodeToPNG();
-
-                ReadWrite.writeBytes(path, false, false, bytes);
+                _camera.SetParent(null);
             }
+            catch (Exception ex)
+            {
+                UnturnedLog.error($"Exception while capturing icon for vehicle {vehicleAsset.GUID} ({vehicleAsset.vehicleName}): {ex.Message}");
+                UnturnedLog.error(ex.StackTrace ?? "No stack trace available");
+                CrashRecoveryHelper.AddToSkipList(vehicleAsset.GUID, vehicleAsset.vehicleName);
 
-            _camera.SetParent(null);
-            Destroy(vehicleParent.gameObject);
+                // Cleanup camera if needed
+                if (_camera != null)
+                {
+                    _camera.SetParent(null);
+                }
+            }
+            finally
+            {
+                // Always cleanup and mark complete
+                if (vehicleParent != null)
+                {
+                    Destroy(vehicleParent.gameObject);
+                }
+                CrashRecoveryHelper.MarkProcessingComplete();
+            }
         }
     }
 }

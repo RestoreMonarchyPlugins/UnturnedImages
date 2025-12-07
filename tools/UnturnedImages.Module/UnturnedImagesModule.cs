@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System.IO;
 using UnityEngine;
+using UnturnedImages.Module.Helpers;
 using UnturnedImages.Module.Images;
 using UnturnedImages.Module.Models;
 using UnturnedImages.Module.Patches;
@@ -33,15 +34,21 @@ namespace UnturnedImages.Module
 
             Instance = this;
 
-            if (File.Exists("config.json"))
+            // Load config first
+            var configPath = Path.Combine(ReadWrite.PATH, "config.json");
+            if (File.Exists(configPath))
             {
-                string content = File.ReadAllText("config.json");
+                string content = File.ReadAllText(configPath);
                 Config = JsonConvert.DeserializeObject<UnturnedImagesConfig>(content);
-            } else
+            }
+            else
             {
                 Config = new UnturnedImagesConfig();
-                File.WriteAllText("config.json", JsonConvert.SerializeObject(Config, Formatting.Indented));
+                File.WriteAllText(configPath, JsonConvert.SerializeObject(Config, Formatting.Indented));
             }
+
+            // Check for crash recovery - if pending_asset.txt exists, we crashed on that asset
+            CrashRecoveryHelper.CheckForCrashRecovery();
 
             GameObject = new GameObject();
             DontDestroyOnLoad(GameObject);
@@ -49,6 +56,7 @@ namespace UnturnedImages.Module
             _harmonyPatches.Patch();
             CustomImageTool.Load();
             CustomVehicleTool.Load();
+            AutoStartManager.Load();
             _uiManager.Load();
         }
 
@@ -59,6 +67,7 @@ namespace UnturnedImages.Module
             Destroy(GameObject);
 
             _uiManager.Unload();
+            AutoStartManager.Unload();
             CustomVehicleTool.Unload();
             CustomImageTool.Unload();
             _harmonyPatches.Unpatch();
